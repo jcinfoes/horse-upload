@@ -2,7 +2,7 @@ unit Horse.Upload;
 
 interface
 
-uses System.SysUtils, Horse, System.Classes,System.JSON;
+uses System.SysUtils, Horse, System.Classes, System.JSON;
 
 type
   TUploadFileInfo = record
@@ -20,7 +20,7 @@ type
     function toJsonArray(AWithFullpath: Boolean = True): TJSONArray;
     function toJsonString: string;
     procedure Clear;
-    function Add(AUploadFileInfo: TUploadFileInfo):Integer;
+    function Add(AUploadFileInfo: TUploadFileInfo): Integer;
     function Count: Integer;
   end;
 
@@ -34,22 +34,24 @@ type
     FOverrideFiles: Boolean;
     FUploadFileCallBack: TUploadFileCallBack;
     FUploadsFishCallBack: TUploadsFishCallBack;
+    FReq: THorseRequest;
     procedure DoUploadFileCallBack(AFile: TUploadFileInfo);
     procedure DoUploadsFishCallBack(AFiles: TUploadFiles);
   public
     constructor Create(AStorePath: string);
   public
-    //Path where files will be stored on server
+    // Path where files will be stored on server
     property StorePath: string read FStorePath write FStorePath;
-    //Creates the path if it doesn't exist
+    // Creates the path if it doesn't exist
     property ForceDir: Boolean read FForceDir write FForceDir default True;
-    //If true it replaces existing files.
-    //If false, it automatically increments the file name. Ex: file.txt, file_1.txt, file_2.txt ......
+    // If true it replaces existing files.
+    // If false, it automatically increments the file name. Ex: file.txt, file_1.txt, file_2.txt ......
     property OverrideFiles: Boolean read FOverrideFiles write FOverrideFiles default False;
-    //Callback for each file received
+    // Callback for each file received
     property UploadFileCallBack: TUploadFileCallBack read FUploadFileCallBack write FUploadFileCallBack;
-    //Callback on end of all files
+    // Callback on end of all files
     property UploadsFishCallBack: TUploadsFishCallBack read FUploadsFishCallBack write FUploadsFishCallBack;
+    property Req: THorseRequest read FReq write FReq;
   end;
 
 procedure Upload(Req: THorseRequest; Res: THorseResponse; Next: TProc);
@@ -61,11 +63,11 @@ uses Web.HTTPApp, System.Math, Web.ReqMulti, IdHashMessageDigest, System.IOUtils
 type
   TMultipartContentParserAccess = class(TMultipartContentParser);
 
-function MD5FromStream(AStream:TStream):string;
+function MD5FromStream(AStream: TStream): string;
 var
- LIdmd5: TIdHashMessageDigest5;
+  LIdmd5: TIdHashMessageDigest5;
 begin
-  LIdmd5:= TIdHashMessageDigest5.Create;
+  LIdmd5 := TIdHashMessageDigest5.Create;
   try
     Result := LowerCase(LIdmd5.HashStreamAsHex(AStream));
   finally
@@ -73,9 +75,9 @@ begin
   end;
 end;
 
-{Credits for:
-David Heffernan
-https://stackoverflow.com/questions/28220015/function-to-increment-filename}
+{ Credits for:
+  David Heffernan
+  https://stackoverflow.com/questions/28220015/function-to-increment-filename }
 procedure DecodeFileName(const AFileName: string; out Stem, Ext: string; out Number: Integer);
 var
   P: Integer;
@@ -116,7 +118,7 @@ end;
 function ProcessUploads(AWebRequest: TWebRequest; AConfig: TUploadConfig): string;
 var
   I, LFilesCount, LFilesOK: Integer;
-  LFiles : TAbstractWebRequestFiles;
+  LFiles: TAbstractWebRequestFiles;
   LFile: TAbstractWebRequestFile;
   LStream: TFileStream;
   LMpReq: TMultipartContentParserAccess;
@@ -154,7 +156,7 @@ begin
             LUploadFileInfo.Clear;
             LFile := LFiles[I];
 
-            LLocalFilePath := TPath.Combine(AConfig.StorePath, ExtractFileName(LFile.FileName));
+            LLocalFilePath := TPath.Combine(AConfig.StorePath, ExtractFileName(LFile.filename));
             if not AConfig.OverrideFiles then
             begin
               LLocalFilePath := AvailableFileName(LLocalFilePath);
@@ -163,13 +165,13 @@ begin
 
             LUploadFileInfo.filename := ExtractFileName(LLocalFilePath);
             LUploadFileInfo.fullpath := LLocalFilePath;
-            LUploadFileInfo.size := LFile.Stream.Size;
+            LUploadFileInfo.size := LFile.Stream.size;
             LUploadFileInfo.md5 := MD5FromStream(LFile.Stream);
 
             LStream := TFileStream.Create(LLocalFilePath, fmCreate);
             try
               LFile.Stream.Position := 0;
-              LStream.CopyFrom(LFile.Stream, LFile.Stream.Size);
+              LStream.CopyFrom(LFile.Stream, LFile.Stream.size);
               LUploadFileInfo.status := 'ok';
               Inc(LFilesOK);
             finally
@@ -201,9 +203,9 @@ var
   LWebRequest: TWebRequest;
   LWebResponse: TWebResponse;
   LContent: TObject;
-  LUploadConfg : TUploadConfig;
+  LUploadConfg: TUploadConfig;
 begin
-  LWebRequest := Req.rawWebRequest;
+  LWebRequest := Req.RawWebRequest;
 
   Next;
 
@@ -265,7 +267,7 @@ begin
   SetLength(Self, 0);
 end;
 
-function TUploadFilesHelper.Add(AUploadFileInfo: TUploadFileInfo):Integer;
+function TUploadFilesHelper.Add(AUploadFileInfo: TUploadFileInfo): Integer;
 begin
   SetLength(Self, Length(Self) + 1);
   Self[High(Self)] := AUploadFileInfo;
@@ -288,18 +290,18 @@ begin
   status := '';
 end;
 
-{TUploadConfig}
+{ TUploadConfig }
 
 procedure TUploadConfig.DoUploadFileCallBack(AFile: TUploadFileInfo);
 begin
   if Assigned(FUploadFileCallBack) then
-    FUploadFileCallBack(Self,AFile);
+    FUploadFileCallBack(Self, AFile);
 end;
 
 procedure TUploadConfig.DoUploadsFishCallBack(AFiles: TUploadFiles);
 begin
   if Assigned(FUploadsFishCallBack) then
-    FUploadsFishCallBack(Self,AFiles);
+    FUploadsFishCallBack(Self, AFiles);
 end;
 
 end.
